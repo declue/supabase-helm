@@ -138,7 +138,7 @@ spec:
                   key: database
                   {{- end }}
             - name: DB_PORT
-              value: {{ .Values.realtime.environment.DB_PORT | quote }}          
+              value: "5432"    
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
