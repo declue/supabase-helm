@@ -48,6 +48,26 @@ spec:
                   {{- else }}
                   name: {{ include "supabase.secret.db" . }}
                   key: username
+                  {{- end }}            
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.db.secretRef }}
+                  name: {{ .Values.secret.db.secretRef }}
+                  key: {{ .Values.secret.db.secretRefKey.password | default "password" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.db" . }}
+                  key: password
+                  {{- end }}
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.db.secretRef }}
+                  name: {{ .Values.secret.db.secretRef }}
+                  key: {{ .Values.secret.db.secretRefKey.database | default "supabase" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.db" . }}
+                  key: database
                   {{- end }}
             - name: DB_PORT
               value: {{ .Values.analytics.environment.DB_PORT | quote }}
