@@ -35,10 +35,6 @@ spec:
           image: "{{ .Values.studio.image.repository }}:{{ .Values.studio.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.studio.image.pullPolicy }}
           env:
-            {{- range $key, $value := .Values.studio.environment }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
             {{- if .Values.kong.enabled }}
             - name: SUPABASE_URL
               value: http://{{ include "supabase.kong.fullname" . }}:{{ .Values.kong.service.port }}
@@ -47,6 +43,16 @@ spec:
             - name: STUDIO_PG_META_URL
               value: http://{{ include "supabase.meta.fullname" . }}:{{ .Values.meta.service.port }}
             {{- end }}
+            - name: AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.jwt.secretRef }}
+                  name: {{ .Values.secret.jwt.secretRef }}
+                  key: {{ .Values.secret.jwt.secretRefKey.secret | default "secret" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.jwt" . }}
+                  key: secret
+                  {{- end }}
             - name: SUPABASE_ANON_KEY
               valueFrom:
                 secretKeyRef:
@@ -75,6 +81,19 @@ spec:
                 secretKeyRef:
                   name: {{ include "supabase.secret.analytics" . }}
                   key: apiKey
+            {{- end }}
+            {{- range $key, $value := .Values.studio.environment }}
+            - name: {{ $key }}
+              {{- if kindIs "map" $value }}
+              {{- if hasKey $value "valueFrom" }}
+              valueFrom:
+                {{- toYaml $value.valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ toYaml $value | quote }}
+              {{- end }}
+              {{- else }}
+              value: {{ $value | quote }}
+              {{- end }}
             {{- end }}
           {{- with .Values.studio.livenessProbe }}
           livenessProbe:

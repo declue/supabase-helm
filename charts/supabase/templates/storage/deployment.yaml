@@ -31,8 +31,8 @@ spec:
         {{- toYaml .Values.storage.podSecurityContext | nindent 8 }}
       initContainers:
         - name: init-db
-          image: postgres:15-alpine
-          imagePullPolicy: IfNotPresent
+          image: "{{ .Values.db.initContainerImage.repository }}:{{ .Values.db.initContainerImage.tag | default "15-alpine" }}"
+          imagePullPolicy: {{ .Values.db.initContainerImage.pullPolicy }}
           env:
             - name: DB_HOST
               {{- if .Values.db.enabled }}
@@ -52,6 +52,19 @@ spec:
                   {{- end }}
             - name: DB_PORT
               value: {{ .Values.analytics.environment.DB_PORT | quote }}
+            {{- range $key, $value := .Values.storage.initContainerEnvironment }}
+            - name: {{ $key }}
+              {{- if kindIs "map" $value }}
+              {{- if hasKey $value "valueFrom" }}
+              valueFrom:
+                {{- toYaml $value.valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ toYaml $value | quote }}
+              {{- end }}
+              {{- else }}
+              value: {{ $value | quote }}
+              {{- end }}
+            {{- end }}
           command: ["/bin/sh", "-c"]
           args:
             - |
@@ -92,50 +105,10 @@ spec:
           image: "{{ .Values.storage.image.repository }}:{{ .Values.storage.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.storage.image.pullPolicy }}
           env:
-            {{- range $key, $value := .Values.storage.environment }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- if .Values.db.enabled }}
-            - name: DB_HOST
-              value: {{ include "supabase.db.fullname" . }}
-            {{- end }}
             {{- if .Values.rest.enabled }}
             - name: POSTGREST_URL
               value: http://{{ include "supabase.rest.fullname" . }}:{{ .Values.rest.service.port }}
             {{- end }}
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  {{- if .Values.secret.db.secretRef }}
-                  name: {{ .Values.secret.db.secretRef }}
-                  key: {{ .Values.secret.db.secretRefKey.password | default "password" }}
-                  {{- else }}
-                  name: {{ include "supabase.secret.db" . }}
-                  key: password
-                  {{- end }}
-            - name: DB_PASSWORD_ENC
-              valueFrom:
-                secretKeyRef:
-                  {{- if .Values.secret.db.secretRef }}
-                  name: {{ .Values.secret.db.secretRef }}
-                  key: {{ .Values.secret.db.secretRefKey.password | default "password" }}
-                  {{- else }}
-                  name: {{ include "supabase.secret.db" . }}
-                  key: password_encoded
-                  {{- end }}
-            - name: DB_NAME
-              valueFrom:
-                secretKeyRef:
-                  {{- if .Values.secret.db.secretRef }}
-                  name: {{ .Values.secret.db.secretRef }}
-                  key: {{ .Values.secret.db.secretRefKey.database | default "database" }}
-                  {{- else }}
-                  name: {{ include "supabase.secret.db" . }}
-                  key: database
-                  {{- end }}
-            - name: DATABASE_URL
-              value: $(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD_ENC)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?search_path=auth&sslmode=$(DB_SSL)
             - name: PGRST_JWT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -186,7 +159,7 @@ spec:
                 secretKeyRef:
                 {{- if .Values.secret.s3.secretRef }}
                   name: {{ .Values.secret.s3.secretRef }}
-                  key: {{ .Values.secret.s3.secretRefKey.keyId | default "accessKey" }}
+                  key: {{ .Values.secret.s3.secretRefKey.accessKey | default "accessKey" }}
                 {{- else }}
                   name: {{ include "supabase.secret.s3" . }}
                   key: accessKey
@@ -196,6 +169,21 @@ spec:
             - name: GLOBAL_S3_ENDPOINT
               value: http://{{ include "supabase.minio.fullname" . }}:{{ default 9000 .Values.minio.service.port }}
             {{- end }}
+            {{- range $key, $value := .Values.storage.environment }}
+            - name: {{ $key }}
+              {{- if kindIs "map" $value }}
+              {{- if hasKey $value "valueFrom" }}
+              valueFrom:
+                {{- toYaml $value.valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ toYaml $value | quote }}
+              {{- end }}
+              {{- else }}
+              value: {{ $value | quote }}
+              {{- end }}
+            {{- end }}
+            - name: DATABASE_URL
+              value: $(DB_DRIVER)://$(DB_USER):$(DB_PASSWORD_ENC)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?search_path=storage,public&sslmode=$(DB_SSL)
           {{- with .Values.storage.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

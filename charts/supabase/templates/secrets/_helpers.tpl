@@ -13,10 +13,10 @@ Expand the name of the SMTP secret.
 {{- end -}}
 
 {{/*
-Expand the name of the dashboard secret.
+Expand the name of the studio secret.
 */}}
-{{- define "supabase.secret.dashboard" -}}
-{{- printf "%s-dashboard" (include "supabase.fullname" .) }}
+{{- define "supabase.secret.studio" -}}
+{{- printf "%s-studio" (include "supabase.fullname" .) }}
 {{- end -}}
 
 {{/*
@@ -45,12 +45,8 @@ Check if both s3 keys are valid
 */}}
 {{- define "supabase.secret.s3.isValid" -}}
 {{- $isValid := "false" -}}
-{{- if .Values.secret.s3.keyId -}}
-{{- if .Values.secret.s3.accessKey -}}
+{{- if or (and .Values.secret.s3.keyId .Values.secret.s3.accessKey) (and .Values.secret.s3.secretRef .Values.secret.s3.secretRefKey) -}}
 {{- printf "true" -}}
-{{- else -}}
-{{- printf "false" -}}
-{{- end -}}
 {{- else -}}
 {{- printf "false" -}}
 {{- end -}}
