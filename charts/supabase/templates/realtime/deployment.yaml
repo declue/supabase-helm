@@ -70,7 +70,7 @@ spec:
                   key: database
                   {{- end }}
             - name: DB_PORT
-              value: {{ .Values.realtime.environment.DB_PORT | quote }}
+              value: "5432"
             {{- range $key, $value := .Values.realtime.initContainerEnvironment }}
             - name: {{ $key }}
               {{- if kindIs "map" $value }}
@@ -87,11 +87,11 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              until pg_isready -h $(DB_HOST) -p $(DB_PORT) -U $(DB_USER); do
               echo "Waiting for database to start..."
-              sleep 2
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" -t 2; do
+                sleep 2
               done
-            - echo "Database is ready"
+              echo "Database is ready"
       containers:
         - name: {{ include "supabase.realtime.name" $ }}
           securityContext:
