@@ -483,8 +483,6 @@ realtime:
   environment:
     # Override the database hostname if using external database
     # DB_HOST: DATABASE.NAMESPACE.svc.cluster.local
-    DB_USER: supabase_admin
-    DB_PORT: 5432
     DB_SSL: disable # disable, allow, prefer, require, verify-ca, verify-full
     DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
     DB_ENC_KEY: supabaserealtime
