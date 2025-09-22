@@ -48,6 +48,8 @@ spec:
               value: {{ $value | quote }}
               {{- end }}
             {{- end }}
+            - name: DB_NAME
+              value: "supabase"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
