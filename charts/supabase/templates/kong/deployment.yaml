@@ -37,10 +37,6 @@ spec:
           command: ["/bin/bash"]
           args: ["/scripts/wrapper.sh"]
           env:
-            {{- range $key, $value := .Values.kong.environment }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
             - name: SUPABASE_ANON_KEY
               valueFrom:
                 secretKeyRef:
@@ -61,27 +57,40 @@ spec:
                   name: {{ include "supabase.secret.jwt" . }}
                   key: serviceKey
                   {{- end }}
-            {{- if .Values.secret.dashboard }}
-            - name: DASHBOARD_USERNAME
+            {{- if .Values.secret.studio }}
+            - name: STUDIO_USERNAME
               valueFrom:
                 secretKeyRef:
-                  {{- if .Values.secret.dashboard.secretRef }}
-                  name: {{ .Values.secret.dashboard.secretRef }}
-                  key: {{ .Values.secret.dashboard.secretRefKey.username | default "username" }}
+                  {{- if .Values.secret.studio.secretRef }}
+                  name: {{ .Values.secret.studio.secretRef }}
+                  key: {{ .Values.secret.studio.secretRefKey.username | default "username" }}
                   {{- else }}
-                  name: {{ include "supabase.secret.dashboard" . }}
+                  name: {{ include "supabase.secret.studio" . }}
                   key: username
                   {{- end }}
-            - name: DASHBOARD_PASSWORD
+            - name: STUDIO_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  {{- if .Values.secret.dashboard.secretRef }}
-                  name: {{ .Values.secret.dashboard.secretRef }}
-                  key: {{ .Values.secret.dashboard.secretRefKey.password | default "password" }}
+                  {{- if .Values.secret.studio.secretRef }}
+                  name: {{ .Values.secret.studio.secretRef }}
+                  key: {{ .Values.secret.studio.secretRefKey.password | default "password" }}
                   {{- else }}
-                  name: {{ include "supabase.secret.dashboard" . }}
+                  name: {{ include "supabase.secret.studio" . }}
                   key: password
                   {{- end }}
+            {{- range $key, $value := .Values.kong.environment }}
+            - name: {{ $key }}
+              {{- if kindIs "map" $value }}
+              {{- if hasKey $value "valueFrom" }}
+              valueFrom:
+                {{- toYaml $value.valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ toYaml $value | quote }}
+              {{- end }}
+              {{- else }}
+              value: {{ $value | quote }}
+              {{- end }}
+            {{- end }}
             {{- end }}
           {{- with .Values.kong.livenessProbe }}
           livenessProbe:
